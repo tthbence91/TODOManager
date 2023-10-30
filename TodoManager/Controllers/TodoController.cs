@@ -16,6 +16,7 @@ namespace TodoManager.Controllers
         }
 
         [HttpPost]
+        [ServiceFilter(typeof(ValidationFilterAttribute))]
         public async Task<IActionResult> CreateTodoElementAsync([FromBody] TodoDto todo)
         {
             var response = await _repository.CreateTodoAsync(todo);

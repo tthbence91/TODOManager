@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using TodoManager;
 using TodoManager.DataAccess;
@@ -10,6 +11,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<ValidationFilterAttribute>();
 
 // Add configuration
 builder.Configuration
@@ -32,6 +34,7 @@ builder.Services.AddSingleton<ITodoRepository>(sp =>
     return null!;
 });
 
+builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
 builder.Services.AddControllers();
 builder.Services.AddMvcCore();
 
