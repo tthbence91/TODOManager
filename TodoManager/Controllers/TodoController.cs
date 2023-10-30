@@ -31,5 +31,19 @@ namespace TodoManager.Controllers
             var todoElements = await _repository.GetTodosByUserAsync(user);
             return Ok(todoElements);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> SetTodoDoneAsync(string id, [FromQuery][Required] string user)
+        {
+
+            var response = await _repository.SetTodoDoneAsync(id, user);
+
+            if (response == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(response);
+        }
     }
 }

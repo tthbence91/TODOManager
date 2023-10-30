@@ -1,6 +1,7 @@
 ﻿
 using FluentAssertions;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 using Moq;
 using TodoManager.DataAccess;
 using TodoManager.Models;
@@ -16,6 +17,7 @@ namespace TodoManagerTests
             var mockCosmosClient = new Mock<CosmosClient>();
             var mockDatabase = new Mock<Database>();
             var mockContainer = new Mock<Container>();
+            var mockLogger = new Mock<ILogger<TodoRepository>>();
             var mockResponse = new Mock<ItemResponse<Todo>>();
             mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
             mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
@@ -39,7 +41,7 @@ namespace TodoManagerTests
             mockContainer.Setup(c => c.CreateItemAsync(It.Is<Todo>(t => t.User == "Test User" && t.Description == "Test Todo" && t.IsDone), null, null, default))
                 .ReturnsAsync(mockResponse.Object);
 
-            var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName");
+            var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", mockLogger.Object);
 
             // Act
             var createdTodo = await todoRepository.CreateTodoAsync(todoDto);
@@ -59,10 +61,11 @@ namespace TodoManagerTests
             var mockCosmosClient = new Mock<CosmosClient>();
             var mockDatabase = new Mock<Database>();
             var mockContainer = new Mock<Container>();
+            var mockLogger = new Mock<ILogger<TodoRepository>>();
             mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
             mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
 
-            var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName");
+            var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", mockLogger.Object);
 
             string user = "testUser";
 
@@ -91,7 +94,6 @@ namespace TodoManagerTests
             todoElements.Should().HaveCount(expectedTodos.Count);
             todoElements.Should().Contain(t => t.Id == "1");
             todoElements.Should().Contain(t => t.Id == "2");
-
         }
     }
 }

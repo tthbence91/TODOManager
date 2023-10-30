@@ -8,12 +8,14 @@ namespace TodoManager.DataAccess
         private readonly CosmosClient _cosmosClient;
         private readonly Database _database;
         private readonly Container _container;
+        private readonly ILogger<TodoRepository> _logger;
 
-        public TodoRepository(CosmosClient cosmosClient, string databaseName, string containerName)
+        public TodoRepository(CosmosClient cosmosClient, string databaseName, string containerName, ILogger<TodoRepository> logger)
         {
             _cosmosClient = cosmosClient;
             _database = _cosmosClient.GetDatabase(databaseName);
             _container = _database.GetContainer(containerName);
+            _logger = logger;
         }
 
         public async Task<Todo> CreateTodoAsync(TodoDto todoDto)
@@ -45,6 +47,30 @@ namespace TodoManager.DataAccess
             }
 
             return results;
+        }
+
+        public async Task<Todo?> SetTodoDoneAsync(string id, string user)
+        {
+            try
+            {
+                var todoElement = await _container.ReadItemAsync<Todo>(id, new PartitionKey(user));
+
+                todoElement.Resource.IsDone = true;
+
+                var response = await _container.ReplaceItemAsync(
+                    todoElement.Resource,
+                    id,
+                    new PartitionKey(user)
+                );
+
+                return response.Resource;
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "An error occured while trying to set a TODO done in the database.");
+            }
+
+            return null;
         }
     }
 }

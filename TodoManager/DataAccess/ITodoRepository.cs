@@ -7,5 +7,7 @@ namespace TodoManager.DataAccess
         Task<Todo> CreateTodoAsync(TodoDto todoDto);
 
         Task<List<Todo>> GetTodosByUserAsync(string user);
+
+        Task<Todo?> SetTodoDoneAsync(string id, string user);
     }
 }

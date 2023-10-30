@@ -29,7 +29,8 @@ builder.Services.AddSingleton<ITodoRepository>(sp =>
         return new TodoRepository(
             sp.GetRequiredService<CosmosClient>(),
             cosmosDbSettings.DatabaseName,
-            cosmosDbSettings.ContainerName
+            cosmosDbSettings.ContainerName,
+            sp.GetRequiredService<ILogger<TodoRepository>>()
         );
     return null!;
 });
