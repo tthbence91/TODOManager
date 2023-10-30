@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 using TodoManager.DataAccess;
 using TodoManager.Models;
 
@@ -21,6 +22,14 @@ namespace TodoManager.Controllers
         {
             var response = await _repository.CreateTodoAsync(todo);
             return Ok(response);
+        }
+
+        [HttpGet]
+        [ServiceFilter(typeof(ValidationFilterAttribute))]
+        public async Task<IActionResult> GetTodosAsync([FromQuery][Required] string user)
+        {
+            var todoElements = await _repository.GetTodosByUserAsync(user);
+            return Ok(todoElements);
         }
     }
 }
