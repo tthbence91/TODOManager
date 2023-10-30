@@ -67,5 +67,55 @@ namespace TodoManagerTests
             var okResult = (OkObjectResult)result;
             okResult.Value.Should().BeAssignableTo<List<Todo>>();
         }
+
+        [Fact]
+        public async Task WhenInputIsValid_SetTodoDoneAsync_ReturnsOkResult()
+        {
+            // Arrange
+            var mockTodoRepository = new Mock<ITodoRepository>();
+            var todoController = new TodoController(mockTodoRepository.Object);
+
+            string id = "1";
+            string user = "testUser";
+
+            var expectedTodoElement = new Todo
+            {
+                Id = id,
+                User = user,
+                Description = "Task 1",
+                IsDone = true
+            };
+
+            mockTodoRepository.Setup(repo => repo.SetTodoDoneAsync(id, user))
+                .ReturnsAsync(expectedTodoElement);
+
+            // Act
+            var result = await todoController.SetTodoDoneAsync(id, user);
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var okResult = (OkObjectResult)result;
+            okResult.Value.Should().BeEquivalentTo(expectedTodoElement);
+        }
+
+        [Fact]
+        public async Task SetTodoDoneAsync_IfTodoNotFound_ReturnsNotFound()
+        {
+            // Arrange
+            var mockTodoRepository = new Mock<ITodoRepository>();
+            var todoController = new TodoController(mockTodoRepository.Object);
+
+            string id = "1";
+            string user = "testUser";
+
+            mockTodoRepository.Setup(repo => repo.SetTodoDoneAsync(id, user))
+                .ReturnsAsync((Todo)null);
+
+            // Act
+            var result = await todoController.SetTodoDoneAsync(id, user);
+
+            // Assert
+            result.Should().BeOfType<NotFoundResult>();
+        }
     }
 }
