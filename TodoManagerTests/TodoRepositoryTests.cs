@@ -51,5 +51,47 @@ namespace TodoManagerTests
             createdTodo.Description.Should().Be("Test Todo");
             createdTodo.IsDone.Should().BeTrue();
         }
+
+        [Fact]
+        public async Task GetTodosByUserAsync_ReturnsListOfTodoElements()
+        {
+            // Arrange
+            var mockCosmosClient = new Mock<CosmosClient>();
+            var mockDatabase = new Mock<Database>();
+            var mockContainer = new Mock<Container>();
+            mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+            mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+            var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName");
+
+            string user = "testUser";
+
+            var expectedTodos = new List<Todo>
+            {
+                new Todo { Id = "1", User = user, Description = "Task 1", IsDone = false },
+                new Todo { Id = "2", User = user, Description = "Task 2", IsDone = true }
+            };
+            var feedResponseMock = new Mock<FeedResponse<Todo>>();
+            feedResponseMock.Setup(x => x.GetEnumerator()).Returns(expectedTodos.GetEnumerator());
+            var feedIterator = new Mock<FeedIterator<Todo>>();
+            feedIterator.Setup(f => f.HasMoreResults).Returns(true);
+            feedIterator.Setup(f => f.ReadNextAsync(It.IsAny<CancellationToken>()))
+                        .ReturnsAsync(feedResponseMock.Object)
+                        .Callback(() => feedIterator
+                            .Setup(f => f.HasMoreResults)
+                            .Returns(false));
+
+            mockContainer.Setup(c => c.GetItemQueryIterator<Todo>(It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+                .Returns(feedIterator.Object);
+
+            // Act
+            var todoElements = await todoRepository.GetTodosByUserAsync(user);
+
+            // Assert
+            todoElements.Should().HaveCount(expectedTodos.Count);
+            todoElements.Should().Contain(t => t.Id == "1");
+            todoElements.Should().Contain(t => t.Id == "2");
+
+        }
     }
 }

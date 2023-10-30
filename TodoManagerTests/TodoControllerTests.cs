@@ -48,5 +48,24 @@ namespace TodoManagerTests
             model.User.Should().Be("Test User");
             model.IsDone.Should().BeFalse();
         }
+
+        [Fact]
+        public async Task WhenUserProvided_GetTodosAsync_ReturnsOkResult()
+        {
+            // Arrange
+            string user = "testUser";
+            var mockTodoRepository = new Mock<ITodoRepository>();
+            mockTodoRepository.Setup(r => r.GetTodosByUserAsync(user)).ReturnsAsync(new List<Todo>());
+            var todoController = new TodoController(mockTodoRepository.Object);
+
+
+            // Act
+            var result = await todoController.GetTodosAsync(user);
+
+            // Assert
+            result.Should().BeOfType<OkObjectResult>();
+            var okResult = (OkObjectResult)result;
+            okResult.Value.Should().BeAssignableTo<List<Todo>>();
+        }
     }
 }
