@@ -1,3 +1,7 @@
+using Microsoft.Azure.Cosmos;
+using TodoManager;
+using TodoManager.DataAccess;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -9,6 +13,26 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Add configuration
+builder.Configuration
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true);
+
+
+// Set up CosmosDb Client
+var cosmosDbSettings = builder.Configuration.GetSection("CosmosDbSettings").Get<CosmosDbSettings>();
+builder.Services.AddSingleton(sp => new CosmosClient(cosmosDbSettings.Endpoint, cosmosDbSettings.MasterKey));
+builder.Services.AddSingleton<ITodoRepository>(sp =>
+{
+    if (cosmosDbSettings != null)
+        return new TodoRepository(
+            sp.GetRequiredService<CosmosClient>(),
+            cosmosDbSettings.DatabaseName,
+            cosmosDbSettings.ContainerName
+        );
+    return null!;
+});
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
