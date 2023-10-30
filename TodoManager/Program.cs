@@ -11,8 +11,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
-
 // Add configuration
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -33,6 +31,12 @@ builder.Services.AddSingleton<ITodoRepository>(sp =>
         );
     return null!;
 });
+
+builder.Services.AddControllers();
+builder.Services.AddMvcCore();
+
+var app = builder.Build();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -44,6 +48,6 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers().WithOpenApi();
 
 app.Run();

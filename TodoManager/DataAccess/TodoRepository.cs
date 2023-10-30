@@ -16,9 +16,18 @@ namespace TodoManager.DataAccess
             _container = _database.GetContainer(containerName);
         }
 
-        public async Task CreateTodoAsync(Todo todo)
+        public async Task<Todo> CreateTodoAsync(TodoDto todoDto)
         {
-            await _container.CreateItemAsync(todo);
+            var todo = new Todo
+            {
+                Id = Guid.NewGuid().ToString(), // Generate new GUID
+                User = todoDto.User,
+                Description = todoDto.Description,
+                IsDone = todoDto.IsDone
+            };
+
+            var response = await _container.CreateItemAsync(todo);
+            return response.Resource;
         }
     }
 }

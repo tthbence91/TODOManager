@@ -4,6 +4,6 @@ namespace TodoManager.DataAccess
 {
     public interface ITodoRepository
     {
-        Task CreateTodoAsync(Todo todo);
+        Task<Todo> CreateTodoAsync(TodoDto todoDto);
     }
 }

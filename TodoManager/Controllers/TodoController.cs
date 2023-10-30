@@ -16,10 +16,10 @@ namespace TodoManager.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateTodoElementAsync([FromBody] Todo todo)
+        public async Task<IActionResult> CreateTodoElementAsync([FromBody] TodoDto todo)
         {
-            await _repository.CreateTodoAsync(todo);
-            return Ok();
+            var response = await _repository.CreateTodoAsync(todo);
+            return Ok(response);
         }
     }
 }
