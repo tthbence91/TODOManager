@@ -26,7 +26,7 @@ namespace TodoManager.Controllers
 
         [HttpGet]
         [ServiceFilter(typeof(ValidationFilterAttribute))]
-        public async Task<IActionResult> GetTodosAsync([FromQuery][Required] string user)
+        public async Task<IActionResult> GetTodosOfUserAsync([FromQuery][Required] string user)
         {
             var todoElements = await _repository.GetTodosByUserAsync(user);
             return Ok(todoElements);

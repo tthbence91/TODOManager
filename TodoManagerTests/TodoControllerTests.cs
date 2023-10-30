@@ -60,7 +60,7 @@ namespace TodoManagerTests
 
 
             // Act
-            var result = await todoController.GetTodosAsync(user);
+            var result = await todoController.GetTodosOfUserAsync(user);
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();
