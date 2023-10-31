@@ -9,6 +9,9 @@ namespace TodoManager.DataAccess
         Task<IEnumerable<Todo>> GetTodosByUserAsync(string user);
 
         Task<Todo?> SetTodoDoneAsync(string id, string user);
+
         Task<IEnumerable<Todo>> GetTodosByStatusAsync(string user, bool isDone);
+
+        Task<Todo?> UpdateTodoDescriptionAsync(string id, string user, string newDescription);
     }
 }

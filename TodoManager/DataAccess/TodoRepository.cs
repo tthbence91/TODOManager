@@ -91,5 +91,26 @@ namespace TodoManager.DataAccess
 
             return todoElements;
         }
+
+        public async Task<Todo> UpdateTodoDescriptionAsync(string id, string user, string newDescription)
+        {
+
+            var todoElement = await _container.ReadItemAsync<Todo>(id, new PartitionKey(user));
+
+            if (todoElement == null)
+            {
+                return null;
+            }
+
+            todoElement.Resource.Description = newDescription;
+
+            var response = await _container.ReplaceItemAsync<Todo>(
+                todoElement.Resource,
+                id,
+                new PartitionKey(user)
+            );
+
+            return response.Resource;
+        }
     }
 }
