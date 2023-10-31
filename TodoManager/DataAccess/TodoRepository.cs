@@ -32,7 +32,7 @@ namespace TodoManager.DataAccess
             return response.Resource;
         }
 
-        public async Task<List<Todo>> GetTodosByUserAsync(string user)
+        public async Task<IEnumerable<Todo>> GetTodosByUserAsync(string user)
         {
             var query = new QueryDefinition("SELECT * FROM c WHERE c.User = @user")
                 .WithParameter("@user", user);
@@ -71,6 +71,25 @@ namespace TodoManager.DataAccess
             }
 
             return null;
+        }
+
+        public async Task<IEnumerable<Todo>> GetTodosByStatusAsync(string user, bool isDone)
+        {
+            var query = new QueryDefinition("SELECT * FROM c WHERE c.User = @user AND c.IsDone = @isDone")
+                .WithParameter("@user", user)
+                .WithParameter("@isDone", isDone);
+
+            var todoElements = new List<Todo>();
+
+            var resultSet = _container.GetItemQueryIterator<Todo>(query);
+
+            while (resultSet.HasMoreResults)
+            {
+                var response = await resultSet.ReadNextAsync();
+                todoElements.AddRange(response);
+            }
+
+            return todoElements;
         }
     }
 }

@@ -34,7 +34,7 @@ namespace TodoManagerTests
             mockTodoRepository.Setup(r => r.CreateTodoAsync(It.IsAny<TodoDto>())).ReturnsAsync(createdTodo);
 
             // Act
-            var result = await todoController.CreateTodoElementAsync(todoDto);
+            var result = await todoController.CreateTodoAsync(todoDto);
 
             // Assert
             result.Should().BeOfType<OkObjectResult>();

@@ -18,7 +18,7 @@ namespace TodoManager.Controllers
 
         [HttpPost]
         [ServiceFilter(typeof(ValidationFilterAttribute))]
-        public async Task<IActionResult> CreateTodoElementAsync([FromBody] TodoDto todo)
+        public async Task<IActionResult> CreateTodoAsync([FromBody] TodoDto todo)
         {
             var response = await _repository.CreateTodoAsync(todo);
             return Ok(response);
@@ -44,6 +44,19 @@ namespace TodoManager.Controllers
             }
 
             return Ok(response);
+        }
+
+        [HttpGet("status")]
+        public async Task<IActionResult> GetTodosByStatusAsync([FromQuery][Required] string user, [FromQuery][Required] bool isDone)
+        {
+            if (string.IsNullOrEmpty(user))
+            {
+                return BadRequest("User parameter is required.");
+            }
+
+            var todoElements = await _repository.GetTodosByStatusAsync(user, isDone);
+
+            return Ok(todoElements);
         }
     }
 }
