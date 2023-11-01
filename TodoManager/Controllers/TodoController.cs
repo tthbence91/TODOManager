@@ -50,7 +50,7 @@ public class TodoController : ControllerBase
         var response = await _repository.SetTodoDoneAsync(id, user);
         if (response == null)
         {
-            return NotFound();
+            return NotFound("The TODO was not found on the Database");
         }
         return Ok(response);
     }
@@ -79,7 +79,7 @@ public class TodoController : ControllerBase
 
         if (response == null)
         {
-            return NotFound();
+            return NotFound("The TODO was not found on the Database");
         }
 
         return Ok(response);

@@ -156,7 +156,7 @@ public class TodoRepositoryTest
             
         var id = "1";
         var user = "testUser";
-        var errorMessage = "An error occured while trying to set a TODO done in the database.";
+        var errorMessage = "An error occurred for user [testUser] while trying to set a TODO done in the database.";
 
 
 

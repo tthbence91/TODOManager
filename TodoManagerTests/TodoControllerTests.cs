@@ -115,6 +115,6 @@ public class TodoControllerTest
         var result = await todoController.SetTodoDoneAsync(id, user);
 
         // Assert
-        result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<NotFoundObjectResult>();
     }
 }
