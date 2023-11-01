@@ -139,8 +139,9 @@ public class TodoRepository : ITodoRepository
         {
             var todoElement = await _container.ReadItemAsync<Todo>(id, new PartitionKey(user));
 
-            if (todoElement == null)
+            if (todoElement.Resource == null)
             {
+                _logger.LogInformation($"TODO element with ID [{id}] not found for user [{user}]");
                 return null;
             }
 

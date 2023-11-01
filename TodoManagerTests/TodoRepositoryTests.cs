@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using Moq;
 using TodoManager.DataAccess;
 using TodoManager.Models;
@@ -288,7 +287,7 @@ public class TodoRepositoryTests
     }
 
     [Fact]
-    public async Task SetTodoDoneAsync_WhenResponseResourceIsNull_ReturnsNullAndLogsError()
+    public async Task SetTodoDoneAsync_WhenResponseResourceIsNull_ReturnsNullAndLogsInformation()
     {
         // Arrange
         var mockCosmosClient = new Mock<CosmosClient>();
@@ -321,5 +320,236 @@ public class TodoRepositoryTests
 
     #endregion
 
+    #region GetTodosByStatusAsync
 
+    [Fact]
+    public async Task GetTodosByStatusAsync_ReturnsListOfTodoElements()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+
+        string user = "testUser";
+        bool isDone = true;
+
+        var expectedTodos = new List<Todo>
+        {
+            new() { Id = "1", User = user, Description = "Task 1", IsDone = true },
+            new() { Id = "2", User = user, Description = "Task 2", IsDone = true }
+        };
+        var feedResponseMock = new Mock<FeedResponse<Todo>>();
+        feedResponseMock.Setup(x => x.GetEnumerator()).Returns(expectedTodos.GetEnumerator());
+        var feedIterator = new Mock<FeedIterator<Todo>>();
+        feedIterator.Setup(f => f.HasMoreResults).Returns(true);
+        feedIterator.Setup(f => f.ReadNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(feedResponseMock.Object)
+            .Callback(() => feedIterator
+                .Setup(f => f.HasMoreResults)
+                .Returns(false));
+
+        mockContainer.Setup(c => c.GetItemQueryIterator<Todo>(It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Returns(feedIterator.Object);
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", NullLogger<TodoRepository>.Instance);
+
+        // Act
+        var todoElements = await todoRepository.GetTodosByStatusAsync(user, isDone);
+
+        // Assert
+        todoElements.Should().HaveCount(expectedTodos.Count);
+        todoElements.Should().Contain(t => t.Id == "1");
+        todoElements.Should().Contain(t => t.Id == "2");
+    }
+
+    [Fact]
+    public async Task GetTodosByStatusAsync_IfNoResults_ReturnsEmptyList()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+
+        string user = "testUser";
+        bool isDone = true;
+
+        var feedResponseMock = new Mock<FeedResponse<Todo>>();
+        feedResponseMock.Setup(x => x.GetEnumerator()).Returns(Enumerable.Empty<Todo>().GetEnumerator());
+        var feedIterator = new Mock<FeedIterator<Todo>>();
+        feedIterator.Setup(f => f.HasMoreResults).Returns(true);
+        feedIterator.Setup(f => f.ReadNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(feedResponseMock.Object)
+            .Callback(() => feedIterator
+                .Setup(f => f.HasMoreResults)
+                .Returns(false));
+
+        mockContainer.Setup(c => c.GetItemQueryIterator<Todo>(It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Returns(feedIterator.Object);
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", NullLogger<TodoRepository>.Instance);
+
+        // Act
+        var todoElements = await todoRepository.GetTodosByStatusAsync(user, isDone);
+
+        // Assert
+        todoElements.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetTodosByStatusAsync_ShouldReturnEmptyListOnException()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string user = "testUser";
+        bool isDone = true;
+        var errorMessage = $"An error occurred for user [{user}] while trying to query TODOs by status from the database.";
+        var exception = new CosmosException("Simulated exception", HttpStatusCode.ServiceUnavailable, 0, "activityId", 1.0);
+
+        mockContainer.Setup(c => c.GetItemQueryIterator<Todo>(It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Throws(exception);
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var todoElements = await todoRepository.GetTodosByStatusAsync(user, isDone);
+
+        // Assert
+        todoElements.Should().BeEmpty();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Error && entry.Message == errorMessage);
+    }
+
+    #endregion
+
+    #region MyRegion
+
+    [Fact]
+    public async Task UpdateTodoDescriptionAsync_ShouldReturnUpdatedTodo()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var mockLogger = new Mock<ILogger<TodoRepository>>();
+
+        string id = "1";
+        string user = "testUser";
+        string newDescription = "Updated Task Description";
+
+        var originalTodoElement = new Todo
+        {
+            Id = id,
+            User = user,
+            Description = "Task 1",
+            IsDone = false
+        };
+        var updatedTodoElement = new Todo
+        {
+            Id = id,
+            User = user,
+            Description = newDescription,
+            IsDone = false
+        };
+        var itemResponseMock = new Mock<ItemResponse<Todo>>();
+        itemResponseMock.SetupSequence(x => x.Resource).Returns(originalTodoElement).Returns(originalTodoElement).Returns(updatedTodoElement);
+
+        mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user), null, default))
+            .ReturnsAsync(itemResponseMock.Object);
+
+        var updatedItemResponseMock = new Mock<ItemResponse<Todo>>();
+        updatedItemResponseMock.Setup(x => x.Resource).Returns(updatedTodoElement);
+
+        mockContainer.Setup(c => c.ReplaceItemAsync(updatedTodoElement, id, new PartitionKey(user), null, default))
+            .ReturnsAsync(updatedItemResponseMock.Object);
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", mockLogger.Object);
+
+        // Act
+        var result = await todoRepository.UpdateTodoDescriptionAsync(id, user, newDescription);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEquivalentTo(updatedTodoElement);
+    }
+
+    [Fact]
+    public async Task UpdateTodoDescriptionAsync_ShouldReturnNullOnException()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string id = "1";
+        string user = "testUser";
+        string newDescription = "Updated Task Description";
+        var errorMessage = $"An error occurred for user [{user}] while trying to change a TODO's description in the database.";
+        var exception = new CosmosException("Not Found", HttpStatusCode.NotFound, 0, null, 1);
+        
+        mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user), null, default))
+            .ThrowsAsync(exception);
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var result = await todoRepository.UpdateTodoDescriptionAsync(id, user, newDescription);
+
+        // Assert
+        result.Should().BeNull();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Error && entry.Message == errorMessage);
+    }
+
+    [Fact]
+    public async Task UpdateTodoDescriptionAsync_IfResponseIsNull_ReturnsNull()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string id = "1";
+        string user = "testUser";
+        string newDescription = "Updated Task Description";
+        var errorMessage = $"TODO element with ID [{id}] not found for user [{user}]";
+        
+        var itemResponseMock = new Mock<ItemResponse<Todo>>();
+        itemResponseMock.Setup(x => x.Resource).Returns((Todo)null!);
+
+        mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user), null, default))
+            .ReturnsAsync(itemResponseMock.Object); // Simulating a null response
+
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var result = await todoRepository.UpdateTodoDescriptionAsync(id, user, newDescription);
+
+        // Assert
+        result.Should().BeNull();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Information && entry.Message == errorMessage);
+    }
+
+    #endregion
 }
