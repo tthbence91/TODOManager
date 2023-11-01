@@ -1,17 +1,16 @@
 ﻿using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 
-namespace TodoManager
+namespace TodoManager;
+
+public class ValidationFilterAttribute : IActionFilter
 {
-    public class ValidationFilterAttribute : IActionFilter
+    public void OnActionExecuting(ActionExecutingContext context)
     {
-        public void OnActionExecuting(ActionExecutingContext context)
+        if (!context.ModelState.IsValid)
         {
-            if (!context.ModelState.IsValid)
-            {
-                context.Result = new UnprocessableEntityObjectResult(context.ModelState);
-            }
+            context.Result = new UnprocessableEntityObjectResult(context.ModelState);
         }
-        public void OnActionExecuted(ActionExecutedContext context) { }
     }
+    public void OnActionExecuted(ActionExecutedContext context) { }
 }

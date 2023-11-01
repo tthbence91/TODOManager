@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using Azure;
-using Microsoft.Azure.Cosmos;
+﻿using Microsoft.Azure.Cosmos;
 using TodoManager.Models;
 
 namespace TodoManager.DataAccess;

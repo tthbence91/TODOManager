@@ -7,66 +7,65 @@ using Moq;
 using Microsoft.AspNetCore.Routing;
 using TodoManager;
 
-namespace TodoManagerTests
+namespace TodoManagerTests;
+
+public class ValidationFilterTests
 {
-    public class ValidationFilterTests
+    [Fact]
+    public void OnActionExecuting_ValidModelState_ShouldNotChangeResult()
     {
-        [Fact]
-        public void OnActionExecuting_ValidModelState_ShouldNotChangeResult()
-        {
-            // Arrange
-            var actionContext = new ActionExecutingContext(
-                new ActionContext
-                {
-                    HttpContext = new DefaultHttpContext(),
-                    RouteData = new RouteData(),
-                    ActionDescriptor = new ActionDescriptor(),
-                },
-                new List<IFilterMetadata>(),
-                new Dictionary<string, object>(),
-                new Mock<Controller>().Object
-            );
+        // Arrange
+        var actionContext = new ActionExecutingContext(
+            new ActionContext
+            {
+                HttpContext = new DefaultHttpContext(),
+                RouteData = new RouteData(),
+                ActionDescriptor = new ActionDescriptor(),
+            },
+            new List<IFilterMetadata>(),
+            new Dictionary<string, object>(),
+            new Mock<Controller>().Object
+        );
 
-            var filter = new ValidationFilterAttribute();
+        var filter = new ValidationFilterAttribute();
 
-            // Act
-            filter.OnActionExecuting(actionContext);
+        // Act
+        filter.OnActionExecuting(actionContext);
 
-            // Assert
-            actionContext.Result.Should().BeNull();
-        }
+        // Assert
+        actionContext.Result.Should().BeNull();
+    }
 
-        [Fact]
-        public void OnActionExecuting_InvalidModelState_ShouldReturnUnprocessableEntityResult()
-        {
-            // Arrange
-            var actionContext = new ActionExecutingContext(
-                new ActionContext
-                {
-                    HttpContext = new DefaultHttpContext(),
-                    RouteData = new RouteData(),
-                    ActionDescriptor = new ActionDescriptor(),
-                },
-                new List<IFilterMetadata>(),
-                new Dictionary<string, object>(),
-                new Mock<Controller>().Object
-            );
+    [Fact]
+    public void OnActionExecuting_InvalidModelState_ShouldReturnUnprocessableEntityResult()
+    {
+        // Arrange
+        var actionContext = new ActionExecutingContext(
+            new ActionContext
+            {
+                HttpContext = new DefaultHttpContext(),
+                RouteData = new RouteData(),
+                ActionDescriptor = new ActionDescriptor(),
+            },
+            new List<IFilterMetadata>(),
+            new Dictionary<string, object>(),
+            new Mock<Controller>().Object
+        );
 
-            actionContext.ModelState.AddModelError("PropertyName", "Error Message");
+        actionContext.ModelState.AddModelError("PropertyName", "Error Message");
 
-            var filter = new ValidationFilterAttribute();
+        var filter = new ValidationFilterAttribute();
 
-            // Act
-            filter.OnActionExecuting(actionContext);
+        // Act
+        filter.OnActionExecuting(actionContext);
 
-            // Assert
-            actionContext.Result.Should().BeOfType<UnprocessableEntityObjectResult>();
-            var result = actionContext.Result as UnprocessableEntityObjectResult;
-            result?.Value.Should().BeOfType<SerializableError>();
-            var errors = result?.Value as SerializableError;
+        // Assert
+        actionContext.Result.Should().BeOfType<UnprocessableEntityObjectResult>();
+        var result = actionContext.Result as UnprocessableEntityObjectResult;
+        result?.Value.Should().BeOfType<SerializableError>();
+        var errors = result?.Value as SerializableError;
 
-            errors.Should().NotBeNull();
-            errors.Should().ContainKey("PropertyName");
-        }
+        errors.Should().NotBeNull();
+        errors.Should().ContainKey("PropertyName");
     }
 }
