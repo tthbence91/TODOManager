@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Azure;
 using Microsoft.Azure.Cosmos;
 using TodoManager.Models;
 
@@ -29,6 +30,7 @@ public class TodoRepository : ITodoRepository
             };
 
             var response = await _container.CreateItemAsync(todo);
+            _logger.LogDebug($"Creating a TODO element consumed {response.RequestCharge} RUs");
             return response.Resource;
         }
         catch (Exception e)
@@ -48,11 +50,14 @@ public class TodoRepository : ITodoRepository
             var iterator = _container.GetItemQueryIterator<Todo>(query);
             var results = new List<Todo>();
 
+            double requestCharge = 0;
             while (iterator.HasMoreResults)
             {
                 var response = await iterator.ReadNextAsync();
+                requestCharge += response.RequestCharge;
                 results.AddRange(response.ToList());
             }
+            _logger.LogDebug($"Querying TODO elements consumed {requestCharge} RUs");
 
             return results;
         }
@@ -83,6 +88,8 @@ public class TodoRepository : ITodoRepository
                 new PartitionKey(user)
             );
 
+            _logger.LogDebug($"Setting a TODO element to Done consumed {todoElement.RequestCharge + response.RequestCharge} RUs");
+
             return response.Resource;
         }
         catch (Exception e)
@@ -103,12 +110,15 @@ public class TodoRepository : ITodoRepository
             var todoElements = new List<Todo>();
 
             var resultSet = _container.GetItemQueryIterator<Todo>(query);
-
+            
+            double requestCharge = 0;
             while (resultSet.HasMoreResults)
             {
                 var response = await resultSet.ReadNextAsync();
+                requestCharge += response.RequestCharge;
                 todoElements.AddRange(response);
             }
+            _logger.LogDebug($"Querying TODO elements by status consumed {requestCharge} RUs");
 
             return todoElements;
         }
@@ -132,11 +142,13 @@ public class TodoRepository : ITodoRepository
 
             todoElement.Resource.Description = newDescription;
 
-            var response = await _container.ReplaceItemAsync<Todo>(
+            var response = await _container.ReplaceItemAsync(
                 todoElement.Resource,
                 id,
                 new PartitionKey(user)
             );
+            
+            _logger.LogDebug($"Changing a TODO element's description consumed {todoElement.RequestCharge + response.RequestCharge} RUs");
 
             return response.Resource;
         }
