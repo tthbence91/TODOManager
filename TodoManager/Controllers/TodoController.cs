@@ -25,7 +25,7 @@ public class TodoController : ControllerBase
         var response = await _repository.CreateTodoAsync(todo);
         if (response == null)
         {
-            return UnprocessableEntity("Could not create TODO on the database.");
+            return UnprocessableEntity("Could not create TODO in the database.");
         }
         return Ok(response);
     }
@@ -50,7 +50,7 @@ public class TodoController : ControllerBase
         var response = await _repository.SetTodoDoneAsync(id, user);
         if (response == null)
         {
-            return NotFound("The TODO was not found on the Database");
+            return NotFound("The TODO was not found in the database");
         }
         return Ok(response);
     }
@@ -74,7 +74,7 @@ public class TodoController : ControllerBase
 
         if (response == null)
         {
-            return NotFound("The TODO was not found on the Database");
+            return NotFound("The TODO was not found in the database");
         }
 
         return Ok(response);

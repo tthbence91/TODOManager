@@ -1,16 +1,17 @@
-﻿using FluentAssertions;
-using Microsoft.AspNetCore.Mvc;
+﻿using System.Net;
+using FluentAssertions;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using Moq;
-using TodoManager.Controllers;
 using TodoManager.DataAccess;
 using TodoManager.Models;
+using TodoManagerTests.Fakes;
 
 namespace TodoManagerTests;
 
-public class TodoRepositoryTest
+public class TodoRepositoryTests
 {
     #region CreateTodoAsync
 
@@ -58,6 +59,39 @@ public class TodoRepositoryTest
         createdTodo.IsDone.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task CreateTodoAsync_ShouldReturnNullOnException()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+        mockCosmosClient.Setup(c => c.GetDatabase("databaseName")).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer("containerName")).Returns(mockContainer.Object);
+        
+        var todoDto = new TodoDto
+        {
+            User = "Test User",
+            Description = "Test Todo",
+            IsDone = true
+        };
+        
+        var exception = new CosmosException("Simulated exception", HttpStatusCode.ServiceUnavailable, 0,"activityId", 1.0);
+        var errorMessage = "An error occurred for user [Test User] while trying to create a TODO on the database.";
+        mockContainer.Setup(c => c.CreateItemAsync(It.IsAny<Todo>(), null, null, default))
+            .ThrowsAsync(exception);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var createdTodo = await todoRepository.CreateTodoAsync(todoDto);
+
+        // Assert
+        createdTodo.Should().BeNull();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Error && entry.Message == errorMessage);
+    }
+
     #endregion
 
     #region GetTodosByUserAsync
@@ -103,6 +137,35 @@ public class TodoRepositoryTest
         todoElements.Should().Contain(t => t.Id == "2");
     }
 
+    [Fact]
+    public async Task GetTodosByUserAsync_HandlesException()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string user = "testUser";
+        
+        var exception = new CosmosException("Simulated exception", HttpStatusCode.ServiceUnavailable, 0, "activityId", 1.0);
+        var errorMessage = $"An error occurred for user [{user}] while trying to list their TODOs from the database.";
+
+        mockContainer.Setup(c => c.GetItemQueryIterator<Todo>(It.IsAny<QueryDefinition>(), null, It.IsAny<QueryRequestOptions>()))
+            .Throws(exception);
+
+        mockCosmosClient.Setup(c => c.GetDatabase(It.IsAny<string>())).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer(It.IsAny<string>())).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var todoElements = await todoRepository.GetTodosByUserAsync(user);
+
+        // Assert
+        todoElements.Should().BeEmpty();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Error && entry.Message == errorMessage);
+    }
     #endregion
 
     #region SetTodoDoneAsync
@@ -133,7 +196,7 @@ public class TodoRepositoryTest
             IsDone = true
         };
         var itemResponseMock = new Mock<ItemResponse<Todo>>();
-        itemResponseMock.SetupSequence(x => x.Resource).Returns(originalTodoElement).Returns(updatedTodoElement);
+        itemResponseMock.SetupSequence(x => x.Resource).Returns(originalTodoElement).Returns(originalTodoElement).Returns(updatedTodoElement);
 
         mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user),null,default))
             .ReturnsAsync(itemResponseMock.Object);
@@ -193,7 +256,70 @@ public class TodoRepositoryTest
             Times.Once);
     }
 
+    [Fact]
+    public async Task SetTodoDoneAsync_ShouldReturnNullOnException()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string id = "1";
+        string user = "testUser";
+        
+        var exception = new CosmosException("Simulated exception", HttpStatusCode.ServiceUnavailable, 0, "activityId", 1.0);
+        var errorMessage = $"An error occurred for user [{user}] while trying to set a TODO done in the database.";
+
+        mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user), null, default))
+            .ThrowsAsync(exception);
+
+        mockCosmosClient.Setup(c => c.GetDatabase(It.IsAny<string>())).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer(It.IsAny<string>())).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var result = await todoRepository.SetTodoDoneAsync(id, user);
+
+        // Assert
+        result.Should().BeNull();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Error && entry.Message == errorMessage);
+    }
+
+    [Fact]
+    public async Task SetTodoDoneAsync_WhenResponseResourceIsNull_ReturnsNullAndLogsError()
+    {
+        // Arrange
+        var mockCosmosClient = new Mock<CosmosClient>();
+        var mockDatabase = new Mock<Database>();
+        var mockContainer = new Mock<Container>();
+        var fakeLogger = new FakeLogger<TodoRepository>();
+
+        string id = "1";
+        string user = "testUser";
+        var errorMessage = $"TODO element with ID [{id}] not found for user [{user}]";
+
+        var itemResponseMock = new Mock<ItemResponse<Todo>>();
+        itemResponseMock.Setup(x => x.Resource).Returns((Todo)null!);
+
+        mockContainer.Setup(c => c.ReadItemAsync<Todo>(id, new PartitionKey(user), null, default))
+            .ReturnsAsync(itemResponseMock.Object);
+
+        mockCosmosClient.Setup(c => c.GetDatabase(It.IsAny<string>())).Returns(mockDatabase.Object);
+        mockDatabase.Setup(d => d.GetContainer(It.IsAny<string>())).Returns(mockContainer.Object);
+
+        var todoRepository = new TodoRepository(mockCosmosClient.Object, "databaseName", "containerName", fakeLogger);
+
+        // Act
+        var result = await todoRepository.SetTodoDoneAsync(id, user);
+
+        // Assert
+        result.Should().BeNull();
+        fakeLogger.LogEntries.Should().Contain(entry => entry.LogLevel == LogLevel.Information && entry.Message == errorMessage);
+    }
+
     #endregion
 
-    
+
 }
