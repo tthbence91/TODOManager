@@ -1,17 +1,16 @@
 ﻿using TodoManager.Models;
 
-namespace TodoManager.DataAccess
+namespace TodoManager.DataAccess;
+
+public interface ITodoRepository
 {
-    public interface ITodoRepository
-    {
-        Task<Todo> CreateTodoAsync(TodoDto todoDto);
+    Task<Todo?> CreateTodoAsync(TodoDto todoDto);
 
-        Task<IEnumerable<Todo>> GetTodosByUserAsync(string user);
+    Task<IEnumerable<Todo>> GetTodosByUserAsync(string user);
 
-        Task<Todo?> SetTodoDoneAsync(string id, string user);
+    Task<Todo?> SetTodoDoneAsync(string id, string user);
 
-        Task<IEnumerable<Todo>> GetTodosByStatusAsync(string user, bool isDone);
+    Task<IEnumerable<Todo>> GetTodosByStatusAsync(string user, bool isDone);
 
-        Task<Todo?> UpdateTodoDescriptionAsync(string id, string user, string newDescription);
-    }
+    Task<Todo?> UpdateTodoDescriptionAsync(string id, string user, string newDescription);
 }
