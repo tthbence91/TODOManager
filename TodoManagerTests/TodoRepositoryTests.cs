@@ -1,8 +1,10 @@
 ﻿using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using TodoManager.Controllers;
 using TodoManager.DataAccess;
 using TodoManager.Models;
 
@@ -10,6 +12,8 @@ namespace TodoManagerTests;
 
 public class TodoRepositoryTest
 {
+    #region CreateTodoAsync
+
     [Fact]
     public async Task CreateTodoAsync_ShouldReturnCreatedTodo()
     {
@@ -54,6 +58,10 @@ public class TodoRepositoryTest
         createdTodo.IsDone.Should().BeTrue();
     }
 
+    #endregion
+
+    #region GetTodosByUserAsync
+
     [Fact]
     public async Task GetTodosByUserAsync_ReturnsListOfTodoElements()
     {
@@ -70,8 +78,8 @@ public class TodoRepositoryTest
 
         var expectedTodos = new List<Todo>
         {
-            new Todo { Id = "1", User = user, Description = "Task 1", IsDone = false },
-            new Todo { Id = "2", User = user, Description = "Task 2", IsDone = true }
+            new() { Id = "1", User = user, Description = "Task 1", IsDone = false },
+            new() { Id = "2", User = user, Description = "Task 2", IsDone = true }
         };
         var feedResponseMock = new Mock<FeedResponse<Todo>>();
         feedResponseMock.Setup(x => x.GetEnumerator()).Returns(expectedTodos.GetEnumerator());
@@ -94,6 +102,10 @@ public class TodoRepositoryTest
         todoElements.Should().Contain(t => t.Id == "1");
         todoElements.Should().Contain(t => t.Id == "2");
     }
+
+    #endregion
+
+    #region SetTodoDoneAsync
 
     [Fact]
     public async Task WhenInputIsValid_SetTodoDoneAsync_ReturnsUpdatedElement()
@@ -180,4 +192,8 @@ public class TodoRepositoryTest
                 It.IsAny<Func<It.IsAnyType, Exception, string>>()),
             Times.Once);
     }
+
+    #endregion
+
+    
 }

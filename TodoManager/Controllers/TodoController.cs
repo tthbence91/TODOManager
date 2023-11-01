@@ -70,11 +70,6 @@ public class TodoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateTodoElementDescriptionAsync(string id, [FromQuery][Required] string user, [FromBody][Required] string newDescription)
     {
-        if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(newDescription) || string.IsNullOrEmpty(user))
-        {
-            return BadRequest("ID, user, and new description parameters are required.");
-        }
-
         var response = await _repository.UpdateTodoDescriptionAsync(id, user, newDescription);
 
         if (response == null)
