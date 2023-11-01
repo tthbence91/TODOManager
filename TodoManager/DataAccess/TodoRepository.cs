@@ -3,11 +3,21 @@ using TodoManager.Models;
 
 namespace TodoManager.DataAccess;
 
+/// <summary>
+/// Provides access to the Cosmos DB to manage TODOs.
+/// </summary>
 public class TodoRepository : ITodoRepository
 {
     private readonly Container _container;
     private readonly ILogger<TodoRepository> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TodoRepository"/> class.
+    /// </summary>
+    /// <param name="cosmosClient">The Cosmos DB client.</param>
+    /// <param name="databaseName">The name of the Cosmos DB database.</param>
+    /// <param name="containerName">The name of the Cosmos DB container.</param>
+    /// <param name="logger">The logger for capturing application events.</param>
     public TodoRepository(CosmosClient cosmosClient, string databaseName, string containerName, ILogger<TodoRepository> logger)
     {
         var database = cosmosClient.GetDatabase(databaseName);
@@ -15,6 +25,7 @@ public class TodoRepository : ITodoRepository
         _logger = logger;
     }
 
+    /// <inheritdoc/>
     public async Task<Todo?> CreateTodoAsync(TodoDto todoDto)
     {
         try
@@ -38,6 +49,7 @@ public class TodoRepository : ITodoRepository
         }
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<Todo>> GetTodosByUserAsync(string user)
     {
         try
@@ -66,12 +78,7 @@ public class TodoRepository : ITodoRepository
         }
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="user"></param>
-    /// <returns>Can return null, when cannot find </returns>
+    /// <inheritdoc/>
     public async Task<Todo?> SetTodoDoneAsync(string id, string user)
     {
         try
@@ -103,6 +110,7 @@ public class TodoRepository : ITodoRepository
         }
     }
 
+    /// <inheritdoc/>
     public async Task<IEnumerable<Todo>> GetTodosByStatusAsync(string user, bool isDone)
     {
         try
@@ -133,6 +141,7 @@ public class TodoRepository : ITodoRepository
         }
     }
 
+    /// <inheritdoc/>
     public async Task<Todo?> UpdateTodoDescriptionAsync(string id, string user, string newDescription)
     {
         try
